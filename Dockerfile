@@ -1,6 +1,10 @@
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm
+# Базовый образ с Docker Hub (без ghcr.io). Тяжёлые ML-колёса надёжнее на bookworm, не slim.
+FROM python:3.13-bookworm
 
-RUN adduser agent
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir uv
+
+RUN adduser --disabled-password --gecos "" agent
 USER agent
 WORKDIR /home/agent
 
@@ -14,3 +18,4 @@ RUN \
 ENTRYPOINT ["uv", "run", "src/server.py"]
 CMD ["--host", "0.0.0.0"]
 EXPOSE 9009
+EXPOSE 9010
