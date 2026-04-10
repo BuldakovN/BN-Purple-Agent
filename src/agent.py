@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen/qwen3.5-397b-a17b")
-MAX_ITERATIONS = int(os.environ.get("MAX_ITERATIONS", "30"))
+MAX_ITERATIONS = int((os.environ.get("MAX_ITERATIONS") or "").strip() or "30")
 CODE_TIMEOUT = int(os.environ.get("CODE_TIMEOUT", "600"))
 
 

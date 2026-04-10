@@ -46,13 +46,29 @@ uv run src/server.py
 
 ## Running with Docker
 
-```bash
-# Build the image
-docker build -t my-agent .
+Copy [`.env.example`](.env.example) to `.env` and fill in values (at least `OPENROUTER_API_KEY`; see `docs/run.md` for the rest).
 
-# Run the container
-docker run -p 9009:9009 my-agent
+For **pytest on your machine** against the Compose agent, set `AGENT_CARD_URL=http://localhost:9009/` in `.env`. The default `http://bn-purple-agent:9009/` is for clients inside the Compose network (e.g. the e2e container).
+
+```bash
+# Agent only (Compose)
+docker compose up -d --build bn-purple-agent
+
+# Or build/run manually
+docker build -t my-agent .
+docker run --env-file .env -p 9009:9009 my-agent
 ```
+
+### Integration test in Docker (Spaceship Titanic e2e)
+
+Requires Kaggle API credentials (`KAGGLE_USERNAME`, `KAGGLE_KEY`) and accepted competition rules for **spaceship-titanic**.
+
+```bash
+docker compose up -d bn-purple-agent
+docker compose --profile e2e run --rm bn-purple-agent-e2e
+```
+
+The `bn-purple-agent-e2e` service builds from `Dockerfile.test`, waits until the agent passes its healthcheck, then runs `pytest -m integration` against `http://bn-purple-agent:9009`.
 
 ## Testing
 

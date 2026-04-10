@@ -1,5 +1,5 @@
 [project]
-name = "mle-bench-purple-agent"
+name = "bn-mle-bench-purple-agent"
 version = "0.1.0"
 description = "MLE-bench purple agent - solves Kaggle competitions via LangGraph + OpenRouter"
 readme = "README.md"
@@ -23,4 +23,12 @@ test = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
     "httpx>=0.28.1",
+    "kaggle>=1.6.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = ["-m", "not integration"]
+markers = [
+    "integration: needs Kaggle credentials, running agent with OPENROUTER_API_KEY, long timeout",
 ]

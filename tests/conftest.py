@@ -1,3 +1,5 @@
+import os
+
 import httpx
 import pytest
 
@@ -5,8 +7,14 @@ import pytest
 def pytest_addoption(parser):
     parser.addoption(
         "--agent-url",
-        default="http://localhost:9009",
-        help="Agent URL (default: http://localhost:9009)",
+        default=os.environ.get("AGENT_URL", "http://localhost:9009"),
+        help="Agent URL (default: AGENT_URL env or http://localhost:9009)",
+    )
+    parser.addoption(
+        "--competition-timeout",
+        type=int,
+        default=int(os.environ.get("COMPETITION_TIMEOUT", "3600")),
+        help="HTTP timeout (seconds) for full competition run (default: COMPETITION_TIMEOUT env or 3600)",
     )
 
 
@@ -23,3 +31,8 @@ def agent(request):
         pytest.exit(f"Could not connect to agent at {url}: {e}", returncode=1)
 
     return url
+
+
+@pytest.fixture(scope="session")
+def competition_timeout(request) -> int:
+    return request.config.getoption("--competition-timeout")

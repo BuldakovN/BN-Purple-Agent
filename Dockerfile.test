@@ -1,0 +1,16 @@
+# Образ только для pytest (integration): Kaggle + A2A-клиент, без исходников агента.
+FROM python:3.13-bookworm
+
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir uv
+
+RUN adduser --disabled-password --gecos "" testrunner
+USER testrunner
+WORKDIR /home/testrunner
+
+COPY --chown=testrunner:testrunner pyproject.toml uv.lock README.md ./
+COPY --chown=testrunner:testrunner tests ./tests
+
+RUN \
+    --mount=type=cache,target=/home/testrunner/.cache/uv,uid=1000 \
+    uv sync --locked --extra test --no-install-project
