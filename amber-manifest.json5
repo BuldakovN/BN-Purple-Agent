@@ -21,10 +21,7 @@
 
     env: {
       OPENROUTER_API_KEY: "${config.openrouter_api_key}",
-      OPENROUTER_MODEL: {
-        when: "config.openrouter_model",
-        value: "${config.openrouter_model}",
-      },
+      OPENROUTER_MODEL: "${config.openrouter_model}",
     },
 
     network: {
