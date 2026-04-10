@@ -28,6 +28,7 @@ test = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+pythonpath = ["src"]
 addopts = ["-m", "not integration"]
 markers = [
     "integration: needs Kaggle credentials, running agent with OPENROUTER_API_KEY, long timeout",
