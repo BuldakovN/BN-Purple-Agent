@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import pandas as pd
 
-from ml_helpers import truncate_output, validate_submission_report
+from ml_helpers import parse_latest_cv_score, truncate_output, validate_submission_report
+
+
+def test_parse_latest_cv_score_last_wins():
+    text = "CV_SCORE=0.5\nmore\nCV_SCORE=0.82"
+    assert parse_latest_cv_score(text) == 0.82
+
+
+def test_parse_latest_cv_score_none():
+    assert parse_latest_cv_score("no score here") is None
 
 
 def test_truncate_output_success_keeps_tail():

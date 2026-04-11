@@ -15,9 +15,25 @@ _WARNING_BLOCK_RE = re.compile(
     re.MULTILINE,
 )
 
+_CV_SCORE_RE = re.compile(
+    r"CV_SCORE\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)",
+    re.IGNORECASE,
+)
+
 
 def strip_warnings(text: str) -> str:
     return _WARNING_BLOCK_RE.sub("", text).strip()
+
+
+def parse_latest_cv_score(text: str) -> float | None:
+    """Parse the last CV_SCORE=<float> from tool stdout (same convention as AIDE-style agents)."""
+    matches = _CV_SCORE_RE.findall(text or "")
+    if not matches:
+        return None
+    try:
+        return float(matches[-1])
+    except ValueError:
+        return None
 
 
 def validate_submission_report(workdir: str | Path) -> str:

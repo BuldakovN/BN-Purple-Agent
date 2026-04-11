@@ -18,7 +18,7 @@ from langgraph.graph.message import add_messages
 
 from interpreter import Interpreter
 from llm import ChatOpenRouter
-from ml_helpers import strip_warnings, truncate_output, validate_submission_report
+from ml_helpers import parse_latest_cv_score, strip_warnings, truncate_output, validate_submission_report
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +46,11 @@ WORKFLOW:
 2. Read the sample submission file (e.g. sample_submission.csv or sample_submission_null.csv)
    and print its columns - your submission MUST have the exact same columns (same order)
 3. Explore train/test shapes, columns, target distribution (keep prints brief)
-4. If you see train.csv (tabular): use cross-validation or a holdout aligned with the metric in
-   description.md; for class imbalance consider stratified splits
-5. Build a model and generate predictions for the test set. Try to achieve THE BEST possible score!
-6. Save ./submission.csv with ALL columns from the sample submission,
+4. Build a model with cross-validation or a holdout aligned with the metric in description.md
+   (for class imbalance consider stratified splits). Try to achieve THE BEST possible score!
+5. After CV / holdout evaluation, print exactly one line to stdout: CV_SCORE=<float>
+   (use your CV metric so that higher is better; e.g. negate loss if lower is better)
+6. Predict on the test set and save ./submission.csv with ALL columns from the sample submission,
    only replacing the prediction column values (preserve Date, Comment, id, etc.)
 7. Call `validate_submission` and fix any FAIL until it passes
 8. Reply with plain text (no tool call) saying you are finished only after validate_submission passes
@@ -82,15 +83,24 @@ class MLAgent:
         max_iterations: int = 30,
         code_timeout: int = 600,
         updater: TaskUpdater | None = None,
+        exploration_hint: str | None = None,
     ):
         self.workdir = Path(workdir).resolve()
         self.max_iterations = max_iterations
         self._iteration_cap: list[int] = [max_iterations]
         self.updater = updater
+        self.exploration_hint = exploration_hint
+        self._session_best_cv: float = float("-inf")
         self._loop: asyncio.AbstractEventLoop | None = None
         self.interpreter = Interpreter(workdir=str(self.workdir), timeout=code_timeout)
         self.llm = ChatOpenRouter(model=model, api_key=api_key)
         self._graph = self._build_graph()
+
+    @property
+    def last_cv_score(self) -> float | None:
+        if self._session_best_cv == float("-inf"):
+            return None
+        return self._session_best_cv
 
     def _post_status(self, text: str) -> None:
         if self.updater is None or self._loop is None:
@@ -104,6 +114,7 @@ class MLAgent:
         interpreter = self.interpreter
         workdir = self.workdir
         session_started = [False]
+        ml = self
 
         @lc_tool
         def run_python(code: str) -> str:
@@ -111,6 +122,9 @@ class MLAgent:
             result = interpreter.run(code, reset_session=not session_started[0])
             session_started[0] = True
             clean = strip_warnings(result.output)
+            parsed = parse_latest_cv_score(clean)
+            if parsed is not None:
+                ml._session_best_cv = max(ml._session_best_cv, parsed)
             is_err = result.exc_type is not None or result.timed_out
             return truncate_output(clean, MAX_OUTPUT_CHARS, is_error=is_err)
 
@@ -196,11 +210,19 @@ class MLAgent:
             logger.info("model : %s", self.llm.model)
             logger.info("max_iter: %d", self.max_iterations)
 
+            self._session_best_cv = float("-inf")
             self._iteration_cap[0] = self.max_iterations
+            user_body = instructions
+            if self.exploration_hint:
+                user_body = (
+                    f"[Exploration branch — follow this bias for your first approach]\n"
+                    f"{self.exploration_hint}\n\n"
+                    f"[Task instructions]\n{instructions}"
+                )
             initial_state: AgentState = {
                 "messages": [
                     SystemMessage(content=SYSTEM_PROMPT),
-                    HumanMessage(content=instructions),
+                    HumanMessage(content=user_body),
                 ],
                 "iteration": 0,
             }
